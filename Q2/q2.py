@@ -7,32 +7,40 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
 from keras.utils import to_categorical 
 from keras import layers, Sequential
+import pandas as pd
 
-def load_data(path: str, flatten = True):
+def load_data(path: str):
     data_list = []
     labels = []
 
-    for i, address in enumerate(glob.glob(path)):
-        img = cv2.imread(address)
-        img = cv2.resize(img, (256,256))
-        img = img/255
-        img = [img.flatten() if flatten else img][0]
+    # Load mnist csv data
+    csv = pd.read_csv(path, header=None)
+    for index, row in csv.iterrows():
+        label = row[0]
+        img_data = row[1:].values.astype(np.uint8).reshape(28, 28)
 
-        data_list.append(img)
-        label = address.split("/")[-1].split(".")[0]
+        # Resize image to 256x256
+        img_resized = cv2.resize(img_data, (256, 256))
+
+        data_list.append(img_resized)
         labels.append(label)
 
-    data_list = np.array(data_list);
+    
+    
 
     return data_list, labels
 
 
-def load_all_data(flatten = True):
-    train_X, train_Y = load_data("Q1/train/Cat/*", flatten)
-    train_X2, train_Y2 = load_data("Q1/train/Dog/*", flatten)
-    test_X1, test_Y1 = load_data("Q1/test/Cat/*", flatten)
-    test_X2, test_Y2 = load_data("Q1/test/Dog/*", flatten)
-    return np.concatenate((train_X, train_X2)), np.concatenate((test_X1, test_X2)), train_Y + train_Y2, test_Y1 + test_Y2
+def load_all_data():
+    train_data, train_labels = load_data('Q2/mnist_train.csv')
+    test_data, test_labels = load_data('Q2/mnist_test.csv')
+
+    x_train = np.array(train_data)
+    x_test = np.array(test_data)
+    y_train = np.array(train_labels)
+    y_test = np.array(test_labels)
+
+    return x_train, x_test, y_train, y_test
 
 def get_cnn_model(input_shape=(256, 256, 3)):
     model = Sequential([
@@ -58,7 +66,7 @@ def get_cnn_model(input_shape=(256, 256, 3)):
         layers.BatchNormalization(),
         layers.Dropout(0.5),
         
-        layers.Dense(2, activation='softmax'),
+        layers.Dense(10, activation='softmax'),
     ])
 
     model.compile(
